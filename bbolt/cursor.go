@@ -25,6 +25,11 @@ func (c *Cursor) Bucket() *Bucket {
 	return c.bucket
 }
 
+/*
+Accepts a visitor to the current record.
+
+This API is inspired by the internals of Kyoto Carbinet.
+*/
 func (c *Cursor) Accept(vis Visitor, writable bool) error {
 	if c.bucket.tx.db == nil {
 		return ErrTxClosed
