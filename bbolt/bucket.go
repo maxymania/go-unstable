@@ -367,10 +367,10 @@ func (b *Bucket) Accept(key []byte,vis Visitor,writable bool) error {
 	// Case 2: Record is a Bucket.
 	if bytes.Equal(key,k) && (flags & bucketLeafFlag)!=0 {
 		// Special case: visit a bucket.
-		var child = b.openBucket(v)
-		if b.buckets != nil {
-			b.buckets[string(key)] = child
-		}
+		var child *Bucket
+		if b.buckets != nil { child = b.buckets[string(key)] }
+		if child==nil { child = b.openBucket(v) }
+		if b.buckets != nil { b.buckets[string(key)] = child }
 		vis.VisitBucket(k,child)
 		return nil
 	}
