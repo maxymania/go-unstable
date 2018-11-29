@@ -18,6 +18,62 @@ server such as Postgres or MySQL.
 [hyc_symas]: https://twitter.com/hyc_symas
 [lmdb]: http://symas.com/mdb/
 
+## Quick tech-info
+
+### github.com/edsrzf/mmap-go
+
+The software has been modified to use the [mmap-go](https://github.com/edsrzf/mmap-go) package instead of
+it's own mmap wrapper, so I don't have to maintain the mmap-binding for every OS myself. IMHO this also
+fosters code-reuse and provenance.
+
+### read/write mmap
+
+The software is capable to use read/write mmap just like LMDB (optionally). Instead of using `pwrite()` to
+update the database, unstable/bbolt, will write directly into the mmap-view. This is a [LMDB][lmdb]'esce
+feature, that the original Boltdb lacked of. There is also a mode, that mmap()s the database twice,
+providing both a read-only mmap for reading and a read/write mmap for writing.
+
+### .Accept(key,visitor,writable)
+
+The software has been extended to implement a concept, that I first observed in [Kyoto Carbinet][kyoto_accept].
+In Kyoto Carbinet each DB implementation implements a method called accept into which the user offers an object
+of the type [Visitor][kyoto_visitor] which implements the methods `visit_full()` and `visit_empty()`. If the
+record exists, `visit_full()` is called, if not `visit_empty()`. These methods return eighter `Visitor::NOP` if
+nothing should be done, `Visitor::REMOVE` if the current record should be deleted if it exists, or a new Value,
+if the current record should be replaced or inserted if it is not existing.
+
+[kyoto_accept]: https://github.com/cloudflare/kyotocabinet/blob/master/kcdb.h#L272
+[kyoto_visitor]: https://github.com/cloudflare/kyotocabinet/blob/master/kcdb.h#L41
+
+### .Descending()
+
+The `*Cursor` got a new method:
+[Descending()](https://godoc.org/github.com/maxymania/go-unstable/bbolt#Cursor.Descending)
+Descending retrieves the nested bucket of the current key of a cursor. Returns nil if the current key is not a bucket.
+The use case for this method is the following code:
+
+```go
+var bucket_of_buckets *bbolt.Bucket
+c := bucket_of_buckets.Cursor()
+for k,_ := c.First(); len(k)!=nil ; k,_ = c.Next() {
+	// This is a superflous B-Tree lookup.
+	bucket := bucket_of_buckets.Bucket(v)
+	fmt.Printf("%q\n",bucket.Get(...))
+}
+```
+
+Now, this can be written as:
+
+```go
+var bucket_of_buckets *bbolt.Bucket
+c := bucket_of_buckets.Cursor()
+for k,_ := c.First(); len(k)!=nil ; k,_ = c.Next() {
+	// We can directly grab the nested Bucket without B-Tree lookup.
+	bucket := c.Descending()
+	fmt.Printf("%q\n",bucket.Get(...))
+}
+```
+
 ## Table of Contents
 
   - [Getting Started](#getting-started)
