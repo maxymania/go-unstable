@@ -25,6 +25,49 @@ func (c *Cursor) Bucket() *Bucket {
 	return c.bucket
 }
 
+func (c *Cursor) Accept(vis Visitor, writable bool) error {
+	if c.bucket.tx.db == nil {
+		return ErrTxClosed
+	} else if writable && !c.bucket.Writable() {
+		return ErrTxNotWritable
+	}
+	vis.VisitBefore()
+	defer vis.VisitAfter()
+	
+	k, v, flags := c.keyValue()
+	
+	b := c.bucket
+	
+	// We handle 2 cases:
+	// Case 1: Record is a Bucket.
+	if (flags & bucketLeafFlag)!=0 {
+		// Special case: visit a bucket.
+		var child = b.openBucket(v)
+		if b.buckets != nil {
+			b.buckets[string(k)] = child
+		}
+		vis.VisitBucket(k,child)
+		return nil
+	}
+	
+	// Case 2: Record exists
+	vop := vis.VisitFull(k,v)
+	switch {
+	case vop.set():
+		if !writable { return ErrInvalidWriteAttempt }
+		key := cloneBytes(k)
+		value := vop.getBuf()
+		c.node().put(key, key, value, 0, 0)
+	case vop.del():
+		if !writable { return ErrInvalidWriteAttempt }
+		key := cloneBytes(k)
+		c.node().del(key)
+	}
+	
+	return nil
+}
+
+
 // First moves the cursor to the first item in the bucket and returns its key and value.
 // If the bucket is empty then a nil key and value are returned.
 // The returned key and value are only valid for the life of the transaction.

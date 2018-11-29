@@ -1,3 +1,27 @@
+/*
+Copyright (c) 2018 Simon Schmidt
+Copyright (c) 2018 coreos/etcd.io Authors
+Copyright (c) 2013 Ben Johnson
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+
 package bbolt
 
 import (
@@ -303,6 +327,70 @@ func (b *Bucket) Put(key []byte, value []byte) error {
 
 	return nil
 }
+
+/*
+Accepts a visitor to a record. The record may or may not exist.
+
+This API is inspired by the internals of Kyoto Carbinet.
+*/
+func (b *Bucket) Accept(key []byte,vis Visitor,writable bool) error {
+	if b.tx.db == nil {
+		return ErrTxClosed
+	} else if writable && !b.Writable() {
+		return ErrTxNotWritable
+	} else if len(key) == 0 {
+		return ErrKeyRequired
+	} else if len(key) > MaxKeySize {
+		return ErrKeyTooLarge
+	}
+	
+	vis.VisitBefore()
+	defer vis.VisitAfter()
+	
+	// Move cursor to correct position.
+	c := b.Cursor()
+	k, v, flags := c.seek(key)
+	
+	// We handle 3 cases:
+	// Case 1: No such record!
+	if !bytes.Equal(key,k) {
+		vop := vis.VisitEmpty(key)
+		if vop.set() {
+			if !writable { return ErrInvalidWriteAttempt }
+			key = cloneBytes(key)
+			value := vop.getBuf()
+			c.node().put(key, key, value, 0, 0)
+		}
+		return nil
+	}
+	
+	// Case 2: Record is a Bucket.
+	if bytes.Equal(key,k) && (flags & bucketLeafFlag)!=0 {
+		// Special case: visit a bucket.
+		var child = b.openBucket(v)
+		if b.buckets != nil {
+			b.buckets[string(key)] = child
+		}
+		vis.VisitBucket(k,child)
+		return nil
+	}
+	
+	// Case 3: Record exists
+	vop := vis.VisitFull(k,v)
+	switch {
+	case vop.set():
+		if !writable { return ErrInvalidWriteAttempt }
+		key = cloneBytes(key)
+		value := vop.getBuf()
+		c.node().put(key, key, value, 0, 0)
+	case vop.del():
+		if !writable { return ErrInvalidWriteAttempt }
+		c.node().del(key)
+	}
+	
+	return nil
+}
+
 
 // Delete removes a key from the bucket.
 // If the key does not exist then nothing is done and a nil error is returned.

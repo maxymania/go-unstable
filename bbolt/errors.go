@@ -69,3 +69,10 @@ var (
 	// non-bucket key on an existing bucket key.
 	ErrIncompatibleValue = errors.New("incompatible value")
 )
+
+// These errors can occour when working with Accept() and Visitor.
+var (
+	// ErrInvalidWriteAttempt is returned when a visitor attempted to perform a write-operation
+	// and Accept() is called in read-only mode (writable=false).
+	ErrInvalidWriteAttempt = errors.New("incompatible value")
+)
