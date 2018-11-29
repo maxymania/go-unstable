@@ -72,6 +72,32 @@ func (c *Cursor) Accept(vis Visitor, writable bool) error {
 	return nil
 }
 
+// Descending retrieves the nested bucket of the current key.
+// Returns nil if the bucket does not exist.
+// The bucket instance is only valid for the lifetime of the transaction.
+func (c *Cursor) Descending() *Bucket {
+	k, v, flags := c.keyValue()
+	b := c.bucket
+
+	// Return nil if it is not a bucket.
+	if (flags&bucketLeafFlag) == 0 {
+		return nil
+	}
+
+	if b.buckets != nil {
+		if child := b.buckets[string(k)]; child != nil {
+			return child
+		}
+	}
+
+	// Otherwise create a bucket and cache it.
+	var child = b.openBucket(v)
+	if b.buckets != nil {
+		b.buckets[string(k)] = child
+	}
+
+	return child
+}
 
 // First moves the cursor to the first item in the bucket and returns its key and value.
 // If the bucket is empty then a nil key and value are returned.
