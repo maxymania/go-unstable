@@ -55,6 +55,7 @@ const (
 	voDELETE = 1<<iota
 	voSET
 	voCOPY // must copy value
+	voNEWBUCKET // create a bucket
 )
 
 /*
@@ -80,20 +81,28 @@ func VisitOpSET(buf []byte) VisitOp { return VisitOp{buf,voSET} }
 // Replace the record. And copy the buffer.
 // Supplied buffer must remain valid until the DB calls another callback or the API returns.
 func VisitOpSET_COPY(buf []byte) VisitOp { return VisitOp{buf,voSET|voCOPY} }
+
+// Creates a new bucket. After this command is executed, the .Accept method immediately calls
+// the .VisitBucket() method with the newly created bucket.
+func VisitOpNEW_BUCKET() VisitOp { return VisitOp{nil,voNEWBUCKET} }
+
 func (v VisitOp) isset(u uint8) bool {
 	return (v.flg&u)==u
 }
 func (v VisitOp) del() bool { return (v.flg&voDELETE)==voDELETE }
 func (v VisitOp) set() bool { return (v.flg&voSET)==voSET }
+func (v VisitOp) bkt() bool { return (v.flg&voNEWBUCKET)==voNEWBUCKET }
 func (v VisitOp) String() string {
 	switch {
 	case v.isset(voDELETE): return "DELETE"
 	case v.isset(voSET):
 		if v.isset(voCOPY) { return fmt.Sprintf("SET-COPY(%q)",v.buf) }
 		return fmt.Sprintf("SET(%q)",v.buf)
+	case v.isset(voNEWBUCKET): return "NEW_BUCKET"
 	}
 	return "NOP"
 }
+
 var visitOp_emptybuf = []byte{}
 func (v VisitOp) getBuf() []byte {
 	if v.isset(voCOPY) {

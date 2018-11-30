@@ -191,6 +191,16 @@ func (b *Bucket) obtainBucket(k, v []byte) *Bucket {
 	return child
 }
 
+func createInlineBucket() ([]byte) {
+	// Create empty, inline bucket.
+	var bucket = Bucket{
+		bucket:      &bucket{},
+		rootNode:    &node{isLeaf: true},
+		FillPercent: DefaultFillPercent,
+	}
+	return bucket.write()
+}
+
 func (b *Bucket) createOrObtainBucketEx(key []byte,obtain bool) (*Bucket, error) {
 	if b.tx.db == nil {
 		return nil, ErrTxClosed
@@ -214,12 +224,13 @@ func (b *Bucket) createOrObtainBucketEx(key []byte,obtain bool) (*Bucket, error)
 	}
 
 	// Create empty, inline bucket.
-	var bucket = Bucket{
-		bucket:      &bucket{},
-		rootNode:    &node{isLeaf: true},
-		FillPercent: DefaultFillPercent,
-	}
-	var value = bucket.write()
+	//var bucket = Bucket{
+	//	bucket:      &bucket{},
+	//	rootNode:    &node{isLeaf: true},
+	//	FillPercent: DefaultFillPercent,
+	//}
+	//var value = bucket.write()
+	var value = createInlineBucket()
 
 	// Insert into node.
 	key = cloneBytes(key)
@@ -373,11 +384,20 @@ func (b *Bucket) Accept(key []byte,vis Visitor,writable bool) error {
 	// Case 1: No such record!
 	if !bytes.Equal(key,k) {
 		vop := vis.VisitEmpty(key)
-		if vop.set() {
+		switch {
+		case vop.set():
 			if !writable { return ErrInvalidWriteAttempt }
 			key = cloneBytes(key)
 			value := vop.getBuf()
 			c.node().put(key, key, value, 0, 0)
+		case vop.bkt():
+			if !writable { return ErrInvalidWriteAttempt }
+			var value = createInlineBucket()
+			// Insert into node.
+			key = cloneBytes(key)
+			c.node().put(key, key, value, 0, bucketLeafFlag)
+			vis.VisitBucket(k,b.Bucket(key))
+			return nil
 		}
 		return nil
 	}
@@ -400,6 +420,16 @@ func (b *Bucket) Accept(key []byte,vis Visitor,writable bool) error {
 	case vop.del():
 		if !writable { return ErrInvalidWriteAttempt }
 		c.node().del(key)
+	case vop.bkt():
+		if !writable { return ErrInvalidWriteAttempt }
+		// NOTE: We simply replace a key-value-pair with a bucket. So we don't have to delete it.
+		// c.node().del(key)
+		var value = createInlineBucket()
+		// Insert into node.
+		key = cloneBytes(key)
+		c.node().put(key, key, value, 0, bucketLeafFlag)
+		vis.VisitBucket(k,b.Bucket(key))
+		return nil
 	}
 	
 	return nil

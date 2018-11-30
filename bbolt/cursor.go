@@ -87,6 +87,16 @@ func (c *Cursor) Accept(vis Visitor, writable bool) error {
 		if !writable { return ErrInvalidWriteAttempt }
 		key := cloneBytes(k)
 		c.node().del(key)
+	case vop.bkt():
+		if !writable { return ErrInvalidWriteAttempt }
+		// NOTE: We simply replace a key-value-pair with a bucket. So we don't have to delete it.
+		// c.node().del(key)
+		var value = createInlineBucket()
+		// Insert into node.
+		key := cloneBytes(k)
+		c.node().put(key, key, value, 0, bucketLeafFlag)
+		vis.VisitBucket(k,b.Bucket(key))
+		return nil
 	}
 	
 	return nil
