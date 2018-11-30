@@ -175,6 +175,7 @@ func (b *Bucket) openBucket(value []byte) *Bucket {
 // This method is called, if we've already called (*Cursor).Seek() and we know,
 // that the key-value pair is a Bucket (eg: (flags & bucketLeafFlag)!=0 )!
 func (b *Bucket) obtainBucket(k, v []byte) *Bucket {
+	// Return the bucket if it is cached.
 	if b.buckets != nil {
 		if child := b.buckets[string(k)]; child != nil {
 			return child

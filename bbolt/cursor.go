@@ -80,19 +80,7 @@ func (c *Cursor) Descending() *Bucket {
 		return nil
 	}
 
-	if b.buckets != nil {
-		if child := b.buckets[string(k)]; child != nil {
-			return child
-		}
-	}
-
-	// Otherwise create a bucket and cache it.
-	var child = b.openBucket(v)
-	if b.buckets != nil {
-		b.buckets[string(k)] = child
-	}
-
-	return child
+	return b.obtainBucket(k,v)
 }
 
 // First moves the cursor to the first item in the bucket and returns its key and value.
