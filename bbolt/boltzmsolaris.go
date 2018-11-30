@@ -1,4 +1,4 @@
-// +build !solaris
+// +build solaris
 
 /*
 Copyright (c) 2018 Simon Schmidt
@@ -23,13 +23,11 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-
 package bbolt
 
 import (
 	"fmt"
 	"unsafe"
-	mmapgo "github.com/edsrzf/mmap-go"
 )
 
 type annotatedError struct{
@@ -42,16 +40,16 @@ func (a annotatedError) Error() string {
 
 // mmap memory maps a DB's data file.
 func mmap(db *DB, sz int) error {
-	datamap := mmapgo.RDONLY
-	writemap := mmapgo.RDONLY
+	datamap := false
+	writemap := false
 	switch{
-	case hasflags(db.db_Flags,DB_WriteSharedMmap): datamap = mmapgo.RDWR
-	case hasflags(db.db_Flags,DB_WriteSeperatedMmap): writemap = mmapgo.RDWR
+	case hasflags(db.db_Flags,DB_WriteSharedMmap): datamap = true
+	case hasflags(db.db_Flags,DB_WriteSeperatedMmap): writemap = true
 	}
 
 	if db.readOnly {
-		datamap = mmapgo.RDONLY
-		writemap = mmapgo.RDONLY
+		datamap = false
+		writemap = false
 	} else if !hasflags(db.db_Flags,DB_DontTruncateOnMmap) {
 		// Truncate the database to the size of the mmap.
 		if err := db.file.Truncate(int64(sz)); err != nil {
@@ -60,17 +58,17 @@ func mmap(db *DB, sz int) error {
 	}
 
 	// Map the data file to memory.
-	b, err := mmapgo.MapRegion(db.file,sz,datamap,0,0)
+	b, err := sMapRegion(db.file,sz,datamap,0)
 	//b, err := syscall.Mmap(int(db.file.Fd()), 0, sz, syscall.PROT_READ, syscall.MAP_SHARED|db.MmapFlags)
 	if err != nil {
 		return annotatedError{"MapRegion",err}
 	}
 
 	switch {
-	case datamap==mmapgo.RDWR:
+	case datamap:
 		db.writeref = b
-	case writemap==mmapgo.RDWR:
-		c, err := mmapgo.MapRegion(db.file,sz,writemap,0,0)
+	case writemap:
+		c, err := sMapRegion(db.file,sz,writemap,0)
 		if err != nil {
 			return annotatedError{"MapRegion",err}
 		}
@@ -103,15 +101,41 @@ func munmap(db *DB) error {
 	if munmap_peekptr(db.dataref)==munmap_peekptr(db.writeref) {
 		db.writeref = nil
 	} else if db.writeref!=nil {
-		err := (*mmapgo.MMap)(&db.writeref).Unmap()
+		err := (*mMap)(&db.writeref).Unmap()
 		if err!=nil { err = annotatedError{"MMap.Unmap()",err} }
 	}
 
 	// Unmap using the original byte slice.
 	db.data = nil
-	err := (*mmapgo.MMap)(&db.dataref).Unmap()
+	err := (*mMap)(&db.dataref).Unmap()
 	db.datasz = 0
 	if err!=nil { err = annotatedError{"MMap.Unmap()",err} }
 	return err
+}
+
+
+// fdatasync flushes written data to a file descriptor.
+func fdatasync(db *DB) (err error) {
+	if (db.writeref!=nil) && !hasflags(db.db_Flags,DB_SkipMsync) {
+		err = (mMap)(db.writeref).Flush()
+		if err!=nil { return }
+	}
+
+	/*
+	This section will be executed if:
+		1. The OS has no unified buffer cache (UBC), (OpenBSD)
+		2. db.dataref is not used for writes.
+	
+	if osHasNoUBC && munmap_peekptr(db.dataref)!=munmap_peekptr(db.writeref) {
+		// perform msync() the readonly mmap'ed area. Will flush the Read-Cache.
+		err = (mMap)(db.dataref).Flush()
+		if err!=nil { return }
+	}
+	*/
+
+	if !hasflags(db.db_Flags,DB_SkipFsync) {
+		err = db.file.Sync()
+	}
+	return
 }
 

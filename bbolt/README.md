@@ -26,6 +26,8 @@ The software has been modified to use the [mmap-go](https://github.com/edsrzf/mm
 it's own mmap wrapper, so I don't have to maintain the mmap-binding for every OS myself. IMHO this also
 fosters code-reuse and provenance.
 
+Note: mmap-go is not used on solaris, because it doesn't compile for that platform.
+
 ### read/write mmap
 
 The software is capable to use read/write mmap just like LMDB (optionally). Instead of using `pwrite()` to

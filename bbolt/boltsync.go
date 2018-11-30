@@ -1,3 +1,5 @@
+// +build !solaris
+
 /*
 Copyright (c) 2018 Simon Schmidt
 Copyright (c) 2018 coreos/etcd.io Authors

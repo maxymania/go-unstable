@@ -1,4 +1,4 @@
-// +build windows
+// +build windows solaris
 
 /*
 Copyright (c) 2018 Simon Schmidt
