@@ -41,6 +41,11 @@ is enough if the following precondition is met:
 
 It if the cursor.Next() returns nil key and value and the previous key is lower
 than the current key, the necessary precondition is met.
+
+If an insert was performed, after this operation, the cursor should EIGHTER point
+to the newly inserted key OR to the key following it (which was the current key
+before that insertion). I observed, that the latter one is true, but this behavoir
+is not guaranteed. Be careful!
 */
 func (UnsafeOp) AcceptExcact(key []byte,c *Cursor,vis Visitor,writable bool) error {
 	b := c.bucket
