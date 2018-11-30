@@ -56,6 +56,7 @@ const (
 	voSET
 	voCOPY // must copy value
 	voNEWBUCKET // create a bucket
+	voVISITBUCKET // visit the created bucket
 )
 
 /*
@@ -82,9 +83,13 @@ func VisitOpSET(buf []byte) VisitOp { return VisitOp{buf,voSET} }
 // Supplied buffer must remain valid until the DB calls another callback or the API returns.
 func VisitOpSET_COPY(buf []byte) VisitOp { return VisitOp{buf,voSET|voCOPY} }
 
+// Creates a new bucket.
+func VisitOpNEW_BUCKET() VisitOp { return VisitOp{nil,voNEWBUCKET} }
+
 // Creates a new bucket. After this command is executed, the .Accept method immediately calls
 // the .VisitBucket() method with the newly created bucket.
-func VisitOpNEW_BUCKET() VisitOp { return VisitOp{nil,voNEWBUCKET} }
+func VisitOpNEW_BUCKET_VISIT() VisitOp { return VisitOp{nil,voNEWBUCKET|voVISITBUCKET} }
+
 
 func (v VisitOp) isset(u uint8) bool {
 	return (v.flg&u)==u

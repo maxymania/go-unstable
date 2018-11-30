@@ -95,7 +95,9 @@ func (c *Cursor) Accept(vis Visitor, writable bool) error {
 		// Insert into node.
 		key := cloneBytes(k)
 		c.node().put(key, key, value, 0, bucketLeafFlag)
-		vis.VisitBucket(k,b.Bucket(key))
+		if vop.isset(voVISITBUCKET) {
+			vis.VisitBucket(k,b.Bucket(key))
+		}
 		return nil
 	}
 	

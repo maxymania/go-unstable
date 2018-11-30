@@ -81,7 +81,9 @@ func (UnsafeOp) AcceptExcact(key []byte,c *Cursor,vis Visitor,writable bool) err
 			// Insert into node.
 			key = cloneBytes(key)
 			c.node().put(key, key, value, 0, bucketLeafFlag)
-			vis.VisitBucket(k,b.Bucket(key))
+			if vop.isset(voVISITBUCKET) {
+				vis.VisitBucket(k,b.Bucket(key))
+			}
 			return nil
 		}
 		return nil
@@ -113,7 +115,9 @@ func (UnsafeOp) AcceptExcact(key []byte,c *Cursor,vis Visitor,writable bool) err
 		// Insert into node.
 		key = cloneBytes(key)
 		c.node().put(key, key, value, 0, bucketLeafFlag)
-		vis.VisitBucket(k,b.Bucket(key))
+		if vop.isset(voVISITBUCKET) {
+			vis.VisitBucket(k,b.Bucket(key))
+		}
 		return nil
 	}
 	

@@ -396,7 +396,9 @@ func (b *Bucket) Accept(key []byte,vis Visitor,writable bool) error {
 			// Insert into node.
 			key = cloneBytes(key)
 			c.node().put(key, key, value, 0, bucketLeafFlag)
-			vis.VisitBucket(k,b.Bucket(key))
+			if vop.isset(voVISITBUCKET) {
+				vis.VisitBucket(k,b.Bucket(key))
+			}
 			return nil
 		}
 		return nil
@@ -428,7 +430,9 @@ func (b *Bucket) Accept(key []byte,vis Visitor,writable bool) error {
 		// Insert into node.
 		key = cloneBytes(key)
 		c.node().put(key, key, value, 0, bucketLeafFlag)
-		vis.VisitBucket(k,b.Bucket(key))
+		if vop.isset(voVISITBUCKET) {
+			vis.VisitBucket(k,b.Bucket(key))
+		}
 		return nil
 	}
 	
