@@ -103,7 +103,9 @@ func (v VisitOp) String() string {
 	case v.isset(voSET):
 		if v.isset(voCOPY) { return fmt.Sprintf("SET-COPY(%q)",v.buf) }
 		return fmt.Sprintf("SET(%q)",v.buf)
-	case v.isset(voNEWBUCKET): return "NEW_BUCKET"
+	case v.isset(voNEWBUCKET):
+		if v.isset(voVISITBUCKET) { return "NEW-BUCKET-VISIT" }
+		return "NEW-BUCKET"
 	}
 	return "NOP"
 }
