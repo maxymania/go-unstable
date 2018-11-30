@@ -172,10 +172,25 @@ func (b *Bucket) openBucket(value []byte) *Bucket {
 	return &child
 }
 
-// CreateBucket creates a new bucket at the given key and returns the new bucket.
-// Returns an error if the key already exists, if the bucket name is blank, or if the bucket name is too long.
-// The bucket instance is only valid for the lifetime of the transaction.
-func (b *Bucket) CreateBucket(key []byte) (*Bucket, error) {
+// This method is called, if we've already called (*Cursor).Seek() and we know,
+// that the key-value pair is a Bucket (eg: (flags & bucketLeafFlag)!=0 )!
+func (b *Bucket) obtainBucket(k, v []byte) *Bucket {
+	if b.buckets != nil {
+		if child := b.buckets[string(k)]; child != nil {
+			return child
+		}
+	}
+
+	// Otherwise create a bucket and cache it.
+	var child = b.openBucket(v)
+	if b.buckets != nil {
+		b.buckets[string(k)] = child
+	}
+
+	return child
+}
+
+func (b *Bucket) createOrObtainBucketEx(key []byte,obtain bool) (*Bucket, error) {
 	if b.tx.db == nil {
 		return nil, ErrTxClosed
 	} else if !b.tx.writable {
@@ -186,11 +201,12 @@ func (b *Bucket) CreateBucket(key []byte) (*Bucket, error) {
 
 	// Move cursor to correct position.
 	c := b.Cursor()
-	k, _, flags := c.seek(key)
+	k, v, flags := c.seek(key)
 
 	// Return an error if there is an existing key.
 	if bytes.Equal(key, k) {
 		if (flags & bucketLeafFlag) != 0 {
+			if obtain { return b.obtainBucket(k,v),nil }
 			return nil, ErrBucketExists
 		}
 		return nil, ErrIncompatibleValue
@@ -216,17 +232,18 @@ func (b *Bucket) CreateBucket(key []byte) (*Bucket, error) {
 	return b.Bucket(key), nil
 }
 
+// CreateBucket creates a new bucket at the given key and returns the new bucket.
+// Returns an error if the key already exists, if the bucket name is blank, or if the bucket name is too long.
+// The bucket instance is only valid for the lifetime of the transaction.
+func (b *Bucket) CreateBucket(key []byte) (*Bucket, error) {
+	return b.createOrObtainBucketEx(key,false)
+}
+
 // CreateBucketIfNotExists creates a new bucket if it doesn't already exist and returns a reference to it.
 // Returns an error if the bucket name is blank, or if the bucket name is too long.
 // The bucket instance is only valid for the lifetime of the transaction.
 func (b *Bucket) CreateBucketIfNotExists(key []byte) (*Bucket, error) {
-	child, err := b.CreateBucket(key)
-	if err == ErrBucketExists {
-		return b.Bucket(key), nil
-	} else if err != nil {
-		return nil, err
-	}
-	return child, nil
+	return b.createOrObtainBucketEx(key,true)
 }
 
 // DeleteBucket deletes a bucket at the given key.
@@ -367,11 +384,7 @@ func (b *Bucket) Accept(key []byte,vis Visitor,writable bool) error {
 	// Case 2: Record is a Bucket.
 	if bytes.Equal(key,k) && (flags & bucketLeafFlag)!=0 {
 		// Special case: visit a bucket.
-		var child *Bucket
-		if b.buckets != nil { child = b.buckets[string(key)] }
-		if child==nil { child = b.openBucket(v) }
-		if b.buckets != nil { b.buckets[string(key)] = child }
-		vis.VisitBucket(k,child)
+		vis.VisitBucket(k,b.obtainBucket(k,v))
 		return nil
 	}
 	

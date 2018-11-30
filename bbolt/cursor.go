@@ -47,11 +47,7 @@ func (c *Cursor) Accept(vis Visitor, writable bool) error {
 	// Case 1: Record is a Bucket.
 	if (flags & bucketLeafFlag)!=0 {
 		// Special case: visit a bucket.
-		var child *Bucket
-		if b.buckets != nil { child = b.buckets[string(k)] }
-		if child==nil { child = b.openBucket(v) }
-		if b.buckets != nil { b.buckets[string(k)] = child }
-		vis.VisitBucket(k,child)
+		vis.VisitBucket(k,b.obtainBucket(k,v))
 		return nil
 	}
 	
