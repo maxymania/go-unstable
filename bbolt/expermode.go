@@ -25,6 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 package bbolt
 
 import "bytes"
+import "context"
 
 /*
 Unsafe operations. These should only be used by users, who know, what they are
@@ -117,5 +118,47 @@ func (UnsafeOp) AcceptExcact(key []byte,c *Cursor,vis Visitor,writable bool) err
 	}
 	
 	return nil
+}
+
+/*
+LinearSeek seeks to a key by performing a linear search within the table. This only makes sense,
+if the key you're searching for is near-by the current key, possibly even inside the same page.
+
+If the cursor does not point to any key-value pair, it will start at the beginning.
+
+Note: this function can be very slow, if a lot of key-value pairs have to be skipped. So be careful.
+*/
+func (UnsafeOp) LinearSeek(c *Cursor,ctx context.Context,seek []byte) (key []byte, value []byte) {
+	var flags uint32
+	key, value, flags = UnsafeOp{}.linearSeek(c,ctx,seek)
+	if (flags & uint32(bucketLeafFlag)) != 0 {
+		value = nil
+	}
+	return
+}
+func (UnsafeOp) linearSeek(c *Cursor,ctx context.Context,seek []byte) (key []byte, value []byte,flags uint32) {
+	if len(c.stack)==0 { c.First() }
+	key, value, flags = c.keyValue()
+	switch bytes.Compare(seek,key) {
+	case -1: goto reverse
+	case 0: return
+	case 1: goto forward
+	}
+reverse:
+	// XXX: rather than having an internal .prev() method, the
+	//      algorithm is implemented inside the public .Prev() method.
+	key,value = c.Prev()
+	for bytes.Compare(seek,key)<0 {
+		if ctx.Err()!=nil { return nil,nil,0 }
+		key,value = c.Prev()
+	}
+	return c.next()
+forward:
+	key, value, flags = c.next()
+	for bytes.Compare(seek,key)>0 {
+		if ctx.Err()!=nil { return nil,nil,0 }
+		key, value, flags = c.next()
+	}
+	return
 }
 
