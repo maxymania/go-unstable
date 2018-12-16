@@ -313,7 +313,7 @@ func (b *Bucket) Get(key []byte) []byte {
 	k, v, flags := b.Cursor().seek(key)
 
 	// Return nil if this is a bucket.
-	if (flags & bucketLeafFlag) != 0 {
+	if notValue(flags) {
 		return nil
 	}
 
@@ -346,7 +346,7 @@ func (b *Bucket) Put(key []byte, value []byte) error {
 	k, _, flags := c.seek(key)
 
 	// Return an error if there is an existing key with a bucket value.
-	if bytes.Equal(key, k) && (flags&bucketLeafFlag) != 0 {
+	if bytes.Equal(key, k) && notValue(flags) {
 		return ErrIncompatibleValue
 	}
 
@@ -405,11 +405,12 @@ func (b *Bucket) Accept(key []byte,vis Visitor,writable bool) error {
 	}
 	
 	// Case 2: Record is a Bucket.
-	if bytes.Equal(key,k) && (flags & bucketLeafFlag)!=0 {
+	if (flags & bucketLeafFlag)!=0 {
 		// Special case: visit a bucket.
 		vis.VisitBucket(k,b.obtainBucket(k,v))
 		return nil
 	}
+	if notValue(flags) { return nil }
 	
 	// Case 3: Record exists
 	vop := vis.VisitFull(k,v)
@@ -460,7 +461,7 @@ func (b *Bucket) Delete(key []byte) error {
 	}
 
 	// Return an error if there is already existing bucket value.
-	if (flags & bucketLeafFlag) != 0 {
+	if notValue(flags) {
 		return ErrIncompatibleValue
 	}
 

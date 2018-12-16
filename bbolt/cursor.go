@@ -74,6 +74,7 @@ func (c *Cursor) Accept(vis Visitor, writable bool) error {
 		vis.VisitBucket(k,b.obtainBucket(k,v))
 		return nil
 	}
+	if notValue(flags) { return nil }
 	
 	// Case 2: Record exists
 	vop := vis.VisitFull(k,v)
@@ -136,7 +137,7 @@ func (c *Cursor) First() (key []byte, value []byte) {
 	}
 
 	k, v, flags := c.keyValue()
-	if (flags & uint32(bucketLeafFlag)) != 0 {
+	if notValue(flags) {
 		return k, nil
 	}
 	return k, v
@@ -155,7 +156,7 @@ func (c *Cursor) Last() (key []byte, value []byte) {
 	c.stack = append(c.stack, ref)
 	c.last()
 	k, v, flags := c.keyValue()
-	if (flags & uint32(bucketLeafFlag)) != 0 {
+	if notValue(flags){
 		return k, nil
 	}
 	return k, v
@@ -167,7 +168,7 @@ func (c *Cursor) Last() (key []byte, value []byte) {
 func (c *Cursor) Next() (key []byte, value []byte) {
 	_assert(c.bucket.tx.db != nil, "tx closed")
 	k, v, flags := c.next()
-	if (flags & uint32(bucketLeafFlag)) != 0 {
+	if notValue(flags) {
 		return k, nil
 	}
 	return k, v
@@ -198,7 +199,7 @@ func (c *Cursor) Prev() (key []byte, value []byte) {
 	// Move down the stack to find the last element of the last leaf under this branch.
 	c.last()
 	k, v, flags := c.keyValue()
-	if (flags & uint32(bucketLeafFlag)) != 0 {
+	if notValue(flags) {
 		return k, nil
 	}
 	return k, v
@@ -218,7 +219,7 @@ func (c *Cursor) Seek(seek []byte) (key []byte, value []byte) {
 
 	if k == nil {
 		return nil, nil
-	} else if (flags & uint32(bucketLeafFlag)) != 0 {
+	} else if notValue(flags) {
 		return k, nil
 	}
 	return k, v
@@ -235,7 +236,7 @@ func (c *Cursor) Delete() error {
 
 	key, _, flags := c.keyValue()
 	// Return an error if current value is a bucket.
-	if (flags & bucketLeafFlag) != 0 {
+	if notValue(flags) {
 		return ErrIncompatibleValue
 	}
 	c.node().del(key)

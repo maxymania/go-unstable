@@ -25,6 +25,15 @@ const (
 	bucketLeafFlag = 0x01
 )
 
+func notValue(f uint32) bool {
+	const m = bucketLeafFlag
+	return (f&m)!=0
+}
+func isValue(f uint32) bool {
+	const m = bucketLeafFlag
+	return (f&m)==0
+}
+
 type pgid uint64
 
 type page struct {

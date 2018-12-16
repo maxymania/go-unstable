@@ -90,11 +90,12 @@ func (UnsafeOp) AcceptExcact(key []byte,c *Cursor,vis Visitor,writable bool) err
 	}
 	
 	// Case 2: Record is a Bucket.
-	if bytes.Equal(key,k) && (flags & bucketLeafFlag)!=0 {
+	if (flags & bucketLeafFlag)!=0 {
 		// Special case: visit a bucket.
 		vis.VisitBucket(k,b.obtainBucket(k,v))
 		return nil
 	}
+	if notValue(flags) { return nil }
 	
 	// Case 3: Record exists
 	vop := vis.VisitFull(k,v)
@@ -135,7 +136,7 @@ Note: this function can be very slow, if a lot of key-value pairs have to be ski
 func (UnsafeOp) LinearSeek(c *Cursor,ctx context.Context,seek []byte) (key []byte, value []byte) {
 	var flags uint32
 	key, value, flags = UnsafeOp{}.linearSeek(c,ctx,seek)
-	if (flags & uint32(bucketLeafFlag)) != 0 {
+	if notValue(flags) {
 		value = nil
 	}
 	return
