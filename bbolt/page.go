@@ -19,18 +19,22 @@ const (
 	leafPageFlag     = 0x02
 	metaPageFlag     = 0x04
 	freelistPageFlag = 0x10
+	
+	radixPageFlag    = 0x20
 )
 
 const (
 	bucketLeafFlag = 0x01
+	
+	radixLeafFlag  = 0x02
 )
 
 func notValue(f uint32) bool {
-	const m = bucketLeafFlag
+	const m = bucketLeafFlag|radixLeafFlag
 	return (f&m)!=0
 }
 func isValue(f uint32) bool {
-	const m = bucketLeafFlag
+	const m = bucketLeafFlag|radixLeafFlag
 	return (f&m)==0
 }
 

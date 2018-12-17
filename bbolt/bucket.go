@@ -54,6 +54,7 @@ type Bucket struct {
 	*bucket
 	tx       *Tx                // the associated transaction
 	buckets  map[string]*Bucket // subbucket cache
+	radixes  map[string]*RadixBucket // radix tree cache <Radix-tree patch.>
 	page     *page              // inline page reference
 	rootNode *node              // materialized node for the root page.
 	nodes    map[pgid]*node     // node cache
@@ -80,6 +81,7 @@ func newBucket(tx *Tx) Bucket {
 	var b = Bucket{tx: tx, FillPercent: DefaultFillPercent}
 	if tx.writable {
 		b.buckets = make(map[string]*Bucket)
+		b.radixes = make(map[string]*RadixBucket)
 		b.nodes = make(map[pgid]*node)
 	}
 	return b
@@ -695,6 +697,24 @@ func (b *Bucket) spill() error {
 		}
 		c.node().put([]byte(name), []byte(name), value, 0, bucketLeafFlag)
 	}
+	
+	// START Radix-tree patch.
+	for name, child := range b.radixes {
+		if err := child.spill(); err!=nil {
+			return err
+		}
+		var c = b.Cursor()
+		k, _, flags := c.seek([]byte(name))
+		if name!=string(k) {
+			panic(fmt.Sprintf("misplaced radix-tree header: %x -> %x", name, k))
+		}
+		if flags&radixLeafFlag == 0 {
+			panic(fmt.Sprintf("unexpected radix-tree header flag: %x", flags))
+		}
+		value := radixPgid2bytes(child.acc.root)
+		c.node().put([]byte(name), []byte(name), value, 0, radixLeafFlag)
+	}
+	// END Radix-tree patch.
 
 	// Ignore if there's not a materialized root node.
 	if b.rootNode == nil {
