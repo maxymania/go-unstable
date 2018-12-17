@@ -170,13 +170,13 @@ func (c *cursor) del(parent *node,key []byte) {
 				switch len(m.edges_k) {
 				case 0:
 					parent.del(key[0])
-					if len(parent.leaf)==1 && len(parent.edges_k)==1 {
+					if len(parent.leaf)==0 && len(parent.edges_k)==1 {
 						c.mergeChildNode(parent)
 					}
 				case 1:
 					c.setLeaf(m,nil)
 					c.mergeChildNode(m)
-				case 2:
+				default:
 					c.setLeaf(m,nil)
 				}
 				return
