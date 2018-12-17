@@ -1,5 +1,7 @@
 # Persistent radix tree
 
+Written: 17.12.2018
+
 This document describes an on-disk, memory-mapped, Copy-on-Write implementation of a
 [radix tree](http://en.wikipedia.org/wiki/Radix_tree), optimized for sparse nodes.
 
