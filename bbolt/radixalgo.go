@@ -189,6 +189,13 @@ func (r *radixAccess) persist() (err error) {
 	return
 }
 
+func (r *radixAccess) persist_n_pages(node *radixNode) int {
+	pgsz := r.tx.db.pageSize
+	off := (pgsz-1)+pageHeaderSize
+	
+	return (off+node.size())/pgsz
+}
+
 func (r *radixAccess) persist_externalize_leaf(node *radixNode) int {
 	pgsz := r.tx.db.pageSize
 	off := (pgsz-1)+pageHeaderSize
@@ -209,7 +216,11 @@ func (r *radixAccess) persist_walk(node *radixNode) (err error) {
 	
 	// perform pack() on non-inlined nodes only.
 	if (node.flags&radixf_inlined)==0 {
-		count := r.persist_externalize_leaf(node)
+		// Initially, persist_externalize_leaf() was called here,
+		// but instead, persist_externalize_leaf() is now called from
+		// within the persist_pack() function, because this can lead
+		// to tighter page-packing, which is desireable.
+		count := r.persist_n_pages(node)
 		sz := (r.tx.db.pageSize*count)-pageHeaderSize
 		r.persist_pack(node,&sz)
 	}
@@ -239,6 +250,9 @@ func (r *radixAccess) persist_pack(node *radixNode,psz *int) {
 	for i,n := 0,int(node.n_edges); i<n; i++ {
 		// Skip non-heap children.
 		if node.edges_p[i]==nil { continue }
+		
+		// Externalize leaf in order to shrink the node.
+		r.persist_externalize_leaf(node)
 		
 		// Skip too-large nodes.
 		if *psz<node.edges_p[i].size() { continue }
