@@ -47,6 +47,7 @@ func radixBinSearch(buf *[256]byte,n int,k byte) (int,bool) {
 			j = h // preserves buf[j]>=k
 		}
 	}
+	if i==n { return i,false }
 	return i,buf[i]==k
 }
 func radixLongestPrefix(a,b []byte) int {
@@ -113,6 +114,24 @@ func (r *radixNode) hasLeaf() bool {
 func (r *radixNode) transferLeaf(o *radixNode) {
 	o.leafEx_p,o.leafEx_v,o.leafIn = r.leafEx_p,r.leafEx_v,r.leafIn
 	r.leafEx_p,r.leafEx_v,r.leafIn = nil,0,nil
+}
+func (r *radixNode) edge_keys() []byte { return r.edges_k[:r.n_edges] }
+func (r *radixNode) edge_collision() bool {
+	b := make(map[byte]bool,r.n_edges)
+	for _,e := range r.edges_k[:r.n_edges] {
+		if b[e] { return true }
+		b[e] = true
+	}
+	return false
+}
+func (r *radixNode) edge_nonsorted() bool {
+	c := -1
+	for _,e := range r.edges_k[:r.n_edges] {
+		ee := int(e)
+		if ee<c { return true }
+		c = ee
+	}
+	return false
 }
 
 /*
@@ -193,6 +212,18 @@ func (a radixAddr) node() ([]byte,*page) {
 	}
 	p := a.t.page(pgid(a.v.offset()))
 	return (*[maxAllocSize]byte)(unsafe.Pointer(&p.ptr))[:],p
+}
+func (a radixAddr) decode() *radixNode {
+	var b []byte
+	if a.p==nil {
+		b,_ = a.node()
+	} else {
+		b = make([]byte,a.p.size())
+		a.p.write(b)
+	}
+	r := new(radixNode)
+	r.read(b)
+	return r
 }
 func (a radixAddr) leaf() []byte {
 	if a.isNil() { return nil }

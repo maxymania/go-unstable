@@ -77,10 +77,12 @@ func (r *radixAccess) insert(key,value []byte) {
 		i,ok := radixBinSearch(&parent.edges_k,int(parent.n_edges),key[0])
 		if !ok {
 			i,_ = parent.insert(key[0])
+			parent.edges_v[i] = 0
 			parent.edges_p[i] = &radixNode{
 				prefix: cloneBytes(key),
 				leafIn: cloneBytes(value),
 			}
+			
 			return
 		}
 		r.decodeChild2(parent.edges_v[i],&parent.edges_p[i])
@@ -95,6 +97,7 @@ func (r *radixAccess) insert(key,value []byte) {
 			m.n_edges = 0
 			i,_ := m.insert(n.prefix[0])
 			m.edges_p[i] = n
+			m.edges_v[i] = 0
 			if l<len(key) {
 				o := &radixNode{
 					prefix: cloneBytes(key[l:]),
@@ -102,6 +105,7 @@ func (r *radixAccess) insert(key,value []byte) {
 				}
 				i,_ := m.insert(key[l])
 				m.edges_p[i] = o
+				m.edges_v[i] = 0
 			} else {
 				m.leafIn = cloneBytes(value)
 			}
@@ -171,6 +175,28 @@ func (r *radixAccess) get(key []byte) (result radixAddr) {
 		parent = m
 	}
 	panic("unreachable")
+}
+
+func (r *radixAccess) getLongestPrefix(key []byte) (prefix,value []byte) {
+	parent := radixAddr{t:r.tx,p:r.head,v:radixPageID(r.root)}
+	prefix = key
+	for {
+		if len(key)==0 {
+			break
+		}
+		m,ok := parent.lookup(key)
+		if !ok {
+			break
+		}
+		key,ok = m.match(key)
+		if !ok {
+			break
+		}
+		parent = m
+		if buf := m.leaf(); len(buf)!=0 { value = buf }
+	}
+	prefix = prefix[:len(prefix)-len(key)]
+	return
 }
 
 /*

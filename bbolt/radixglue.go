@@ -78,9 +78,17 @@ func (r *RadixBucket) Get(key []byte) []byte {
 	return r.acc.get(key).leaf()
 }
 
+// LongestPrefix is like Get, but instead of an exact match, it will return the longest prefix match.
+func (r *RadixBucket) GetLongestPrefix(key []byte) (pref,val []byte) {
+	if len(key) == 0 {
+		return nil,nil
+	}
+	return r.acc.getLongestPrefix(key)
+}
+
 // Put sets the value for a key in the bucket.
 // If the key exist then its previous value will be overwritten.
-// Supplied value SHOULD remain valid for the life of the transaction.
+// (Supplied value SHOULD remain valid for the life of the transaction.)
 // Returns an error if the bucket was created from a read-only transaction,
 // if the key is blank, if the key is too large, or if the value is too large.
 func (r *RadixBucket) Put(key,value []byte) error {
@@ -129,6 +137,18 @@ func (r *RadixBucket) Delete(key []byte) error {
 // Do not use a iterator after the transaction is closed.
 func (r *RadixBucket) Iterator() *RadixIterator {
 	return &RadixIterator{r.acc.traversal()}
+}
+
+// Performs a Prefix-scan on this radix-tree.
+// The returned iterator will only traverse key-value pairs, which's key
+// has the given prefix.
+//
+//
+// Caveats
+//
+// On the returned iterator, the LongestCommonPrefix() method SHALL be malfunctioning!
+func (r *RadixBucket) PrefixScan(prefix []byte) *RadixIterator {
+	return &RadixIterator{r.acc.prefixScan(prefix)}
 }
 
 // Minimum performs a minimum key-value lookup.

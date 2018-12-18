@@ -167,6 +167,34 @@ func (r *radixAccess) traversal() *radixTraversal {
 	return tv
 }
 
+func (r *radixAccess) prefixScan(key []byte) *radixTraversal {
+	buf := radixSlice{slice:new([]byte)}
+	parent := radixAddr{t:r.tx,p:r.head,v:radixPageID(r.root)}
+	for {
+		if len(key)==0 {
+			t := &radixTraversal{slice:buf,root:parent}
+			t.reset()
+			return t
+		}
+		m,ok := parent.lookup(key)
+		if !ok {
+			break
+		}
+		key,ok = m.match(key)
+		if !ok {
+			// If the key was exthausted, we'll tolerate this
+			if len(key)!=0 { break }
+		}
+		buf = buf.appnd(m.prefix())
+		parent = m
+	}
+	t := new(radixTraversal)
+	t.root.t = r.tx
+	t.root.p = new(radixNode)
+	t.reset()
+	return t
+}
+
 func (r *radixAccess) minPair() (key,value []byte) {
 	prefix := radixSlice{slice:new([]byte)}
 	a := radixAddr{t:r.tx,p:r.head,v:radixPageID(r.root)}
