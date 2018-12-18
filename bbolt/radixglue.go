@@ -51,8 +51,13 @@ As a radix tree, it provides features, such as O(k) operations,
 Minimum / Maximum value lookups and Ordered iteration.
 
 Further reading:
-- http://en.wikipedia.org/wiki/Radix_tree
-- https://oscarforner.com/projects/tries
+http://en.wikipedia.org/wiki/Radix_tree
+, https://oscarforner.com/projects/tries
+
+
+Caveats
+
+Radix trees can't be deleted.
 */
 type RadixBucket struct{
 	acc radixAccess
