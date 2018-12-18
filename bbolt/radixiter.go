@@ -115,6 +115,19 @@ start:
 	goto start
 }
 
+func (r *radixTraversalNode) longestCommonPrefix(key []byte) (nr *radixTraversalNode,rest []byte) {
+	for {
+		if len(key)==0 { break }
+		i,m,ok := r.a.lookup_i(key)
+		if !ok { break }
+		r.i = i+1
+		r = &radixTraversalNode{r,m,r.prefix.appnd(m.prefix()),-1,m.n_edges()}
+		key,ok = m.match(key)
+		if !ok { break }
+	}
+	return r,key
+}
+
 type radixTraversal struct{
 	slice radixSlice
 	node *radixTraversalNode
@@ -140,6 +153,13 @@ func (r *radixTraversal) prev() (key,value []byte,ok bool) {
 	ok = r.node!=nil
 	return
 }
+func (r *radixTraversal) longestCommonPrefix(key []byte) (match,rest []byte) {
+	r.reset()
+	r.node,rest = r.node.longestCommonPrefix(key)
+	match = key[:len(key)-len(rest)]
+	return
+}
+
 func (r *radixAccess) traversal() *radixTraversal {
 	parent := radixAddr{t:r.tx,p:r.head,v:radixPageID(r.root)}
 	tv :=  &radixTraversal{root:parent}

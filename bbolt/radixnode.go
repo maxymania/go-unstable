@@ -297,7 +297,10 @@ func (a radixAddr) match(key []byte) (rest []byte,ok bool) {
 	return
 }
 func (a radixAddr) lookup(key []byte) (b radixAddr,ok bool) {
-	var i int
+	_,b,ok = a.lookup_i(key)
+	return
+}
+func (a radixAddr) lookup_i(key []byte) (i int,b radixAddr,ok bool) {
 	if a.p==nil {
 		buf,pag := a.node()
 		compound := *((*uint32)(unsafe.Pointer(&buf[8])))

@@ -167,6 +167,17 @@ func (r *RadixIterator) Prev() (key,value []byte,ok bool) {
 	return r.trav.prev()
 }
 
+// LongestCommonPrefix finds the longest prefix possible byte-string 'match' so that
+// 'match' is a prefix of the parameter 'key' and 'match' is a prefix of the key of
+// at least one existing key-value pair within the radix tree.
+//
+// Calling Next() will return the first key-value pair of which 'match' is a prefix.
+//
+// Calling Prev() will return the last key-value pair of which 'match' is a prefix.
+func (r *RadixIterator) LongestCommonPrefix(key []byte) (match,rest []byte) {
+	return r.trav.longestCommonPrefix(key)
+}
+
 /*
 SECTION: bindings.
 Copyright (c) 2018 Simon Schmidt
