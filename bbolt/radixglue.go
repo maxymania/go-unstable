@@ -45,6 +45,15 @@ func radixBytes2Pgid(b []byte) (p pgid) {
 	return
 }
 
+/*
+Implements a Radix tree in BoltDB, optimized for sparse nodes.
+As a radix tree, it provides features, such as O(k) operations,
+Minimum / Maximum value lookups and Ordered iteration.
+
+Further reading:
+- http://en.wikipedia.org/wiki/Radix_tree
+- https://oscarforner.com/projects/tries
+*/
 type RadixBucket struct{
 	acc radixAccess
 }
@@ -113,6 +122,16 @@ func (r *RadixBucket) Delete(key []byte) error {
 // Do not use a iterator after the transaction is closed.
 func (r *RadixBucket) Iterator() *RadixIterator {
 	return &RadixIterator{r.acc.traversal()}
+}
+
+// Minimum performs a minimum key-value lookup.
+func (r *RadixBucket) Minimum() (key,value []byte) {
+	return r.acc.minPair()
+}
+
+// Maximum performs a maximum key-value lookup.
+func (r *RadixBucket) Maximum() (key,value []byte) {
+	return r.acc.maxPair()
 }
 
 type RadixIterator struct{

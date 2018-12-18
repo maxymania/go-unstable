@@ -102,3 +102,33 @@ func (r *radixAccess) traversal() *radixTraversal {
 	return tv
 }
 
+func (r *radixAccess) minPair() (key,value []byte) {
+	prefix := radixSlice{slice:new([]byte)}
+	a := radixAddr{t:r.tx,p:r.head,v:radixPageID(r.root)}
+	for {
+		if a.isNil() { return }
+		if buf := a.leaf() ; len(buf)!=0 {
+			return prefix.bytes(),buf
+		}
+		if a.n_edges()==0 { return }
+		a = a.edge(0)
+		prefix = prefix.appnd(a.prefix())
+	}
+	panic("unreachable")
+}
+
+func (r *radixAccess) maxPair() (key,value []byte) {
+	prefix := radixSlice{slice:new([]byte)}
+	a := radixAddr{t:r.tx,p:r.head,v:radixPageID(r.root)}
+	for {
+		if a.isNil() { return }
+		if buf := a.leaf() ; len(buf)!=0 {
+			key,value = prefix.bytes(),buf
+		}
+		ne := a.n_edges()
+		if ne==0 { return }
+		a = a.edge(ne-1)
+		prefix = prefix.appnd(a.prefix())
+	}
+	panic("unreachable")
+}
