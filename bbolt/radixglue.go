@@ -119,6 +119,8 @@ func (r *RadixBucket) Delete(key []byte) error {
 
 // Iterator creates a iterator for this radix tree.
 // The iterator is only valid as long as the transaction is open.
+// The iterator initially points to the first key-value pair.
+// For reverse iteration, please call Last().
 // Do not use a iterator after the transaction is closed.
 func (r *RadixBucket) Iterator() *RadixIterator {
 	return &RadixIterator{r.acc.traversal()}
@@ -142,10 +144,22 @@ type RadixIterator struct{
 func (r *RadixIterator) Reset() {
 	r.trav.reset()
 }
+// Last resets the iterator to the last key-value pair in this radix tree.
+func (r *RadixIterator) Last() {
+	r.trav.last()
+}
 
 // Next obtains the next key-value pair from this radix tree.
 func (r *RadixIterator) Next() (key,value []byte,ok bool) {
 	return r.trav.next()
+}
+
+// Prev obtains the previous key-value pair from this radix tree.
+//
+// If Prev is called after Next, thus switching traversal order, glitches such
+// as duplicate key-value pairs may occur.
+func (r *RadixIterator) Prev() (key,value []byte,ok bool) {
+	return r.trav.prev()
 }
 
 /*

@@ -48,6 +48,20 @@ func radixTraverse(a radixAddr,prefix radixSlice,f func(key,value []byte) bool) 
 	
 	return true
 }
+func radixRTraverse(a radixAddr,prefix radixSlice,f func(key,value []byte) bool) bool {
+	n := a.n_edges()
+	i := n
+	for i>0 {
+		i--
+		edge := a.edge(i)
+		if !radixRTraverse(edge,prefix.appnd(edge.prefix()),f) { return false }
+	}
+	
+	if buf := a.leaf() ; len(buf)!=0 {
+		if !f(prefix.bytes(),buf) { return false }
+	}
+	return true
+}
 func (r *radixAccess) traverse(f func(key,value []byte) bool) {
 	parent := radixAddr{t:r.tx,p:r.head,v:radixPageID(r.root)}
 	radixTraverse(parent,radixSlice{slice:new([]byte)},f)
@@ -80,6 +94,27 @@ start:
 	}
 	return
 }
+func (r *radixTraversalNode) callR() (nr *radixTraversalNode,key,value []byte) {
+start:
+	if r.i>0 {
+		r.i--
+		edge := r.a.edge(r.i)
+		N := edge.n_edges()
+		r = &radixTraversalNode{r,edge,r.prefix.appnd(edge.prefix()),N,N}
+	}
+	if r.i==0 {
+		r.i--
+		if buf := r.a.leaf(); len(buf)!=0 { key,value = r.prefix.bytes(),buf }
+	}
+	if r.i<0 {
+		r = r.parent
+	}
+	nr = r
+	if key!=nil && value!=nil { return }
+	if nr==nil { return }
+	goto start
+}
+
 type radixTraversal struct{
 	slice radixSlice
 	node *radixTraversalNode
@@ -89,9 +124,19 @@ func (r *radixTraversal) reset() {
 	if r.slice.slice==nil { r.slice.slice = new([]byte) }
 	r.node = &radixTraversalNode{nil,r.root,r.slice,-1,r.root.n_edges()}
 }
+func (r *radixTraversal) last() {
+	if r.slice.slice==nil { r.slice.slice = new([]byte) }
+	r.node = &radixTraversalNode{nil,r.root,r.slice,r.root.n_edges(),r.root.n_edges()}
+}
 func (r *radixTraversal) next() (key,value []byte,ok bool) {
 	if r.node==nil { return }
 	r.node,key,value = r.node.call()
+	ok = r.node!=nil
+	return
+}
+func (r *radixTraversal) prev() (key,value []byte,ok bool) {
+	if r.node==nil { return }
+	r.node,key,value = r.node.callR()
 	ok = r.node!=nil
 	return
 }
