@@ -63,6 +63,9 @@ var (
 
 	// ErrValueTooLarge is returned when inserting a value that is larger than MaxValueSize.
 	ErrValueTooLarge = errors.New("value too large")
+	
+	// ErrKeyRequired is returned when inserting a zero-length value. (in Radix Tree only)
+	ErrValueRequired = errors.New("value required")
 
 	// ErrIncompatibleValue is returned when trying create or delete a bucket
 	// on an existing non-bucket key or when trying to create or delete a

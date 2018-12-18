@@ -81,11 +81,13 @@ start:
 	return
 }
 type radixTraversal struct{
+	slice radixSlice
 	node *radixTraversalNode
 	root radixAddr
 }
 func (r *radixTraversal) reset() {
-	r.node = &radixTraversalNode{nil,r.root,radixSlice{slice:new([]byte)},-1,r.root.n_edges()}
+	if r.slice.slice==nil { r.slice.slice = new([]byte) }
+	r.node = &radixTraversalNode{nil,r.root,r.slice,-1,r.root.n_edges()}
 }
 func (r *radixTraversal) next() (key,value []byte,ok bool) {
 	if r.node==nil { return }
@@ -95,7 +97,7 @@ func (r *radixTraversal) next() (key,value []byte,ok bool) {
 }
 func (r *radixAccess) traversal() *radixTraversal {
 	parent := radixAddr{t:r.tx,p:r.head,v:radixPageID(r.root)}
-	tv :=  &radixTraversal{nil,parent}
+	tv :=  &radixTraversal{root:parent}
 	tv.reset()
 	return tv
 }

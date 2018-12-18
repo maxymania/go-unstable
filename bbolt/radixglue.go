@@ -1,5 +1,7 @@
 /*
 Copyright (c) 2018 Simon Schmidt
+Copyright (c) 2013-2018 coreos/etcd.io Authors
+Copyright (c) 2013 Ben Johnson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +29,11 @@ import (
 	"unsafe"
 	"bytes"
 )
+
+/*
+SECTION: public api.
+Copyright (c) 2018 Simon Schmidt
+*/
 
 func radixPgid2bytes(p pgid) []byte {
 	b := make([]byte,8)
@@ -62,6 +69,8 @@ func (r *RadixBucket) Put(key,value []byte) error {
 		return ErrKeyRequired
 	} else if len(key) > MaxKeySize {
 		return ErrKeyTooLarge
+	} else if len(value)==0 {
+		return ErrValueRequired
 	} else if int64(len(value)) > MaxValueSize {
 		return ErrValueTooLarge
 	}
@@ -85,8 +94,25 @@ func (r *RadixBucket) Delete(key []byte) error {
 	return nil
 }
 
+func (r *RadixBucket) Iterator() *RadixIterator {
+	return &RadixIterator{r.acc.traversal()}
+}
+
+type RadixIterator struct{
+	trav *radixTraversal
+}
+func (r *RadixIterator) Reset() {
+	r.trav.reset()
+}
+func (r *RadixIterator) Next() (key,value []byte,ok bool) {
+	return r.trav.next()
+}
+
 /*
 SECTION: bindings.
+Copyright (c) 2018 Simon Schmidt
+Copyright (c) 2013-2018 coreos/etcd.io Authors
+Copyright (c) 2013 Ben Johnson
 */
 func (b *Bucket) obtainRadixBucket(k ,v []byte) *RadixBucket {
 	if b.radixes==nil {
@@ -131,12 +157,24 @@ func (b *Bucket) createOrObtainRadixBucket(key []byte,obtain bool) (*RadixBucket
 	
 	return b.obtainRadixBucket(key,v),nil
 }
+
+// CreateRadixBucket creates a new radix-tree bucket at the given key and returns the new bucket.
+// Returns an error if the key already exists, if the bucket name is blank, or if the bucket name is too long.
+// The radix-tree bucket instance is only valid for the lifetime of the transaction.
 func (b *Bucket) CreateRadixBucket(key []byte) (*RadixBucket, error) {
 	return b.createOrObtainRadixBucket(key,false)
 }
+
+// CreateRadixBucketIfExist creates a new radix-tree bucket if it doesn't already exist and returns a reference to it.
+// Returns an error if the bucket name is blank, or if the bucket name is too long.
+// The radix-tree bucket instance is only valid for the lifetime of the transaction.
 func (b *Bucket) CreateRadixBucketIfExist(key []byte) (*RadixBucket, error) {
 	return b.createOrObtainRadixBucket(key,true)
 }
+
+// RadixBucket retrieves a radix-tree bucket by name.
+// Returns nil if the radix-tree bucket does not exist.
+// The radix-tree bucket instance is only valid for the lifetime of the transaction.
 func (b *Bucket) RadixBucket(k []byte) *RadixBucket {
 	c := b.Cursor()
 	if b.radixes==nil {
@@ -154,8 +192,20 @@ func (b *Bucket) RadixBucket(k []byte) *RadixBucket {
 	b.radixes[string(k)] = rad
 	return rad
 }
+
+// CreateRadixBucket creates a new radix-tree bucket at the given key and returns the new bucket.
+// Returns an error if the key already exists, if the bucket name is blank, or if the bucket name is too long.
+// The radix-tree bucket instance is only valid for the lifetime of the transaction.
 func (tx *Tx) CreateRadixBucket(key []byte) (*RadixBucket, error) { return tx.root.CreateRadixBucket(key) }
+
+// CreateRadixBucketIfExist creates a new radix-tree bucket if it doesn't already exist and returns a reference to it.
+// Returns an error if the bucket name is blank, or if the bucket name is too long.
+// The radix-tree bucket instance is only valid for the lifetime of the transaction.
 func (tx *Tx) CreateRadixBucketIfExist(key []byte) (*RadixBucket, error) { return tx.root.CreateRadixBucketIfExist(key) }
+
+// RadixBucket retrieves a radix-tree bucket by name.
+// Returns nil if the radix-tree bucket does not exist.
+// The radix-tree bucket instance is only valid for the lifetime of the transaction.
 func (tx *Tx) RadixBucket(key []byte) *RadixBucket { return tx.root.RadixBucket(key) }
 
 

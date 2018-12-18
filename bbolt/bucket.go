@@ -1,6 +1,6 @@
 /*
 Copyright (c) 2018 Simon Schmidt
-Copyright (c) 2018 coreos/etcd.io Authors
+Copyright (c) 2013-2018 coreos/etcd.io Authors
 Copyright (c) 2013 Ben Johnson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
