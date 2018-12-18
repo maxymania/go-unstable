@@ -88,7 +88,7 @@ func (r *RadixBucket) GetLongestPrefix(key []byte) (pref,val []byte) {
 
 // Put sets the value for a key in the bucket.
 // If the key exist then its previous value will be overwritten.
-// (Supplied value SHOULD remain valid for the life of the transaction.)
+// Supplied value MUST remain valid for the life of the transaction.
 // Returns an error if the bucket was created from a read-only transaction,
 // if the key is blank, if the key is too large, or if the value is too large.
 func (r *RadixBucket) Put(key,value []byte) error {

@@ -72,7 +72,7 @@ func (r *radixAccess) insert(key,value []byte) {
 			if parent.leafEx_v!=0 && !parent.leafEx_v.inlined() {
 				r.tx.db.freelist.free(r.tx.meta.txid,r.tx.page(pgid(parent.leafEx_v.offset())))
 			}
-			parent.leafIn = cloneBytes(value)
+			parent.leafIn = value
 		}
 		i,ok := radixBinSearch(&parent.edges_k,int(parent.n_edges),key[0])
 		if !ok {
@@ -80,7 +80,7 @@ func (r *radixAccess) insert(key,value []byte) {
 			parent.edges_v[i] = 0
 			parent.edges_p[i] = &radixNode{
 				prefix: cloneBytes(key),
-				leafIn: cloneBytes(value),
+				leafIn: value,
 			}
 			
 			return
@@ -101,13 +101,13 @@ func (r *radixAccess) insert(key,value []byte) {
 			if l<len(key) {
 				o := &radixNode{
 					prefix: cloneBytes(key[l:]),
-					leafIn: cloneBytes(value),
+					leafIn: value,
 				}
 				i,_ := m.insert(key[l])
 				m.edges_p[i] = o
 				m.edges_v[i] = 0
 			} else {
-				m.leafIn = cloneBytes(value)
+				m.leafIn = value
 			}
 			return
 		}
