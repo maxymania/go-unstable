@@ -51,6 +51,10 @@ type RadixBucket struct{
 func (r *RadixBucket) spill() error {
 	return r.acc.persist()
 }
+
+// Get retrieves the value for a key in the bucket.
+// Returns a nil value if the key does not exist or if the key is a nested bucket.
+// The returned value is only valid for the life of the transaction.
 func (r *RadixBucket) Get(key []byte) []byte {
 	if len(key) == 0 {
 		return nil
@@ -59,6 +63,12 @@ func (r *RadixBucket) Get(key []byte) []byte {
 	}
 	return r.acc.get(key).leaf()
 }
+
+// Put sets the value for a key in the bucket.
+// If the key exist then its previous value will be overwritten.
+// Supplied value SHOULD remain valid for the life of the transaction.
+// Returns an error if the bucket was created from a read-only transaction,
+// if the key is blank, if the key is too large, or if the value is too large.
 func (r *RadixBucket) Put(key,value []byte) error {
 	if r.acc.tx.db==nil {
 		return ErrTxClosed
@@ -79,6 +89,10 @@ func (r *RadixBucket) Put(key,value []byte) error {
 	r.acc.insert(key,value)
 	return nil
 }
+
+// Delete removes a key from the bucket.
+// If the key does not exist then nothing is done and a nil error is returned.
+// Returns an error if the bucket was created from a read-only transaction.
 func (r *RadixBucket) Delete(key []byte) error {
 	if r.acc.tx.db==nil {
 		return ErrTxClosed
@@ -94,6 +108,9 @@ func (r *RadixBucket) Delete(key []byte) error {
 	return nil
 }
 
+// Iterator creates a iterator for this radix tree.
+// The iterator is only valid as long as the transaction is open.
+// Do not use a iterator after the transaction is closed.
 func (r *RadixBucket) Iterator() *RadixIterator {
 	return &RadixIterator{r.acc.traversal()}
 }
@@ -101,9 +118,13 @@ func (r *RadixBucket) Iterator() *RadixIterator {
 type RadixIterator struct{
 	trav *radixTraversal
 }
+
+// Reset resets the iterator to the first key-value pair in this radix tree.
 func (r *RadixIterator) Reset() {
 	r.trav.reset()
 }
+
+// Next obtains the next key-value pair from this radix tree.
 func (r *RadixIterator) Next() (key,value []byte,ok bool) {
 	return r.trav.next()
 }
