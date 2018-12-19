@@ -280,16 +280,30 @@ func (b *Bucket) DeleteBucket(key []byte) error {
 		return ErrIncompatibleValue
 	}
 
-	// Recursively delete all child buckets.
+	// Recursively delete all child buckets (and radix trees).
 	child := b.Bucket(key)
-	err := child.ForEach(func(k, v []byte) error {
+	var err error
+	{
+		iter := b.Cursor()
+		for k, _ := iter.First(); k != nil; k, _ = iter.Next() {
+			_,_,flags := iter.keyValue()
+			switch {
+			case (flags & bucketLeafFlag)!=0 :
+				err = child.DeleteBucket(k)
+			case (flags & radixLeafFlag)!=0 :
+				err = child.DeleteRadixBucket(k)
+			}
+			if err!=nil { break }
+		}
+	}
+	/*err := child.ForEach(func(k, v []byte) error {
 		if v == nil {
 			if err := child.DeleteBucket(k); err != nil {
 				return fmt.Errorf("delete bucket: %s", err)
 			}
 		}
 		return nil
-	})
+	})*/
 	if err != nil {
 		return err
 	}

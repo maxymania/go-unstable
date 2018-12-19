@@ -61,6 +61,7 @@ func radixLongestPrefix(a,b []byte) int {
 
 type radixID uint64
 func (r radixID) inlined() bool { return (r&7)==radix_Inlined }
+func (r radixID) isPage() bool { return (r&7)==radix_Block }
 func (r radixID) offset() uint64 { return uint64(r>>3) }
 
 func radixInlineID(i int) radixID {
@@ -213,6 +214,7 @@ func (a radixAddr) node() ([]byte,*page) {
 	p := a.t.page(pgid(a.v.offset()))
 	return (*[maxAllocSize]byte)(unsafe.Pointer(&p.ptr))[:],p
 }
+
 func (a radixAddr) decode() *radixNode {
 	var b []byte
 	if a.p==nil {
@@ -248,7 +250,6 @@ func (a radixAddr) leafIn() (leaf []byte) {
 func (a radixAddr) leafEx() (b radixAddr){
 	if a.p==nil {
 		buf,pag := a.node()
-		b = a
 		b = a
 		b.b = pag
 		b.v = *(*radixID)(unsafe.Pointer(&buf[0]))

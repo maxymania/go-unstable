@@ -199,6 +199,29 @@ func (r *radixAccess) getLongestPrefix(key []byte) (prefix,value []byte) {
 	return
 }
 
+
+/*
+SECTION: Erase tree.
+*/
+func (r *radixAccess) erase() {
+	parent := radixAddr{t:r.tx,p:r.head,v:radixPageID(r.root)}
+	r.erase_recur(parent)
+	r.head = new(radixNode)
+	r.root = 0
+}
+// Per-Node code, traversing the tree.
+func (r *radixAccess) erase_recur(a radixAddr) {
+	if a.isNil() { return }
+	
+	for i,n := 0,a.n_edges(); i<n; i++ {
+		r.erase_recur(a.edge(i))
+	}
+	
+	if a.p==nil && a.v.isPage() {
+		r.tx.db.freelist.free(r.tx.meta.txid,r.tx.page(pgid(a.v.offset())))
+	}
+}
+
 /*
 SECTION: Persisting the tree.
 */

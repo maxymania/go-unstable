@@ -204,6 +204,43 @@ Copyright (c) 2018 Simon Schmidt
 Copyright (c) 2013-2018 coreos/etcd.io Authors
 Copyright (c) 2013 Ben Johnson
 */
+func (b *Bucket) deleteRadixBucketInner(k ,v []byte) {
+	if b.radixes!=nil {
+		if rad,ok := b.radixes[string(k)]; ok {
+			delete(b.radixes,string(k))
+			rad.acc.erase()
+			return
+		}
+	}
+	rad := radixAccess{tx:b.tx,root:radixBytes2Pgid(v)}
+	rad.erase()
+}
+func (b *Bucket) DeleteRadixBucket(key []byte) error {
+	if b.tx.db == nil {
+		return ErrTxClosed
+	} else if !b.Writable() {
+		return ErrTxNotWritable
+	}
+	
+	// Move cursor to correct position.
+	c := b.Cursor()
+	k, v, flags := c.seek(key)
+	
+	// Return an error if bucket doesn't exist or is not a bucket.
+	if !bytes.Equal(key, k) {
+		return ErrBucketNotFound
+	} else if (flags & radixLeafFlag) == 0 {
+		return ErrIncompatibleValue
+	}
+	
+	// Perform inner deletion.
+	b.deleteRadixBucketInner(k,v)
+	
+	// Delete the node if we have a matching key.
+	c.node().del(key)
+	return nil
+}
+
 func (b *Bucket) obtainRadixBucket(k ,v []byte) *RadixBucket {
 	if b.radixes==nil {
 		return &RadixBucket{acc:radixAccess{tx:b.tx,root:radixBytes2Pgid(v)}}
