@@ -258,7 +258,7 @@ func (b *Bucket) CreateRadixBucket(key []byte) (*RadixBucket, error) {
 // CreateRadixBucketIfExist creates a new radix-tree bucket if it doesn't already exist and returns a reference to it.
 // Returns an error if the bucket name is blank, or if the bucket name is too long.
 // The radix-tree bucket instance is only valid for the lifetime of the transaction.
-func (b *Bucket) CreateRadixBucketIfExist(key []byte) (*RadixBucket, error) {
+func (b *Bucket) CreateRadixBucketIfNotExists(key []byte) (*RadixBucket, error) {
 	return b.createOrObtainRadixBucket(key,true)
 }
 
@@ -291,7 +291,7 @@ func (tx *Tx) CreateRadixBucket(key []byte) (*RadixBucket, error) { return tx.ro
 // CreateRadixBucketIfExist creates a new radix-tree bucket if it doesn't already exist and returns a reference to it.
 // Returns an error if the bucket name is blank, or if the bucket name is too long.
 // The radix-tree bucket instance is only valid for the lifetime of the transaction.
-func (tx *Tx) CreateRadixBucketIfExist(key []byte) (*RadixBucket, error) { return tx.root.CreateRadixBucketIfExist(key) }
+func (tx *Tx) CreateRadixBucketIfNotExists(key []byte) (*RadixBucket, error) { return tx.root.CreateRadixBucketIfNotExists(key) }
 
 // RadixBucket retrieves a radix-tree bucket by name.
 // Returns nil if the radix-tree bucket does not exist.

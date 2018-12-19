@@ -76,6 +76,15 @@ for k,_ := c.First(); len(k)!=nil ; k,_ = c.Next() {
 }
 ```
 
+### Radix Trees.
+
+This version of Bolt brings a single-level, zero-copy, copy-on-write,
+[radix tree](http://en.wikipedia.org/wiki/Radix_tree), data store. Further reading:
+[Oscar Forner: Trie, TST and Radix Tree](https://oscarforner.com/projects/tries), a comparison between a Trie,
+a Ternary Search Tree (TST) and a Radix Tree;
+[Implementation details](TRIE.md) of this Radix tree implementation;
+[API examples](trie-api.md).
+
 ## Table of Contents
 
   - [Getting Started](#getting-started)
