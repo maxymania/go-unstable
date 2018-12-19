@@ -4,9 +4,9 @@
 // Create a tree
 db.Update(func(tx *bbolt.Tx) error {
 	r,_ := tx.CreateRadixBucketIfNotExists([]byte("myTree"))
-	r.Insert("foo", 1)
-	r.Insert("bar", 2)
-	r.Insert("foobar", 2)
+	r.Put([]byte("foo"), []byte{1})
+	r.Put([]byte("bar"), []byte{2})
+	r.Put([]byte("foobar"), []byte{3})
     return nil
 })
 
