@@ -1,6 +1,6 @@
 # Radix Tree API
 
-```
+```go
 // Create a tree
 db.Update(func(tx *bbolt.Tx) error {
 	r,_ := tx.CreateRadixBucketIfNotExists([]byte("myTree"))
