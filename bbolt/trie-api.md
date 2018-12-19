@@ -23,7 +23,9 @@ db.View(func(tx *bbolt.Tx) error {
 
 ### Known problems.
 
-Radix Trees can be nested in Buckets. Radix trees can't be deleted.
-If a Bucket containing a radix tree is being deleted, this could lead to a resource leak or even to a crash.
+Radix Trees can be nested in Buckets. ~~Radix trees can't be deleted.~~
+~~If a Bucket containing a radix tree is being deleted, this could lead to a resource leak or even to a crash.~~
 
-Please create Radix trees only in the root bucket.
+~~Please create Radix trees only in the root bucket.~~
+
+UPDATE: Radix trees can now be deleted.

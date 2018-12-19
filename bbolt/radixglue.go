@@ -55,9 +55,6 @@ http://en.wikipedia.org/wiki/Radix_tree
 , https://oscarforner.com/projects/tries
 
 
-Caveats
-
-Radix trees can't be deleted.
 */
 type RadixBucket struct{
 	acc radixAccess
@@ -319,6 +316,8 @@ func (b *Bucket) RadixBucket(k []byte) *RadixBucket {
 	b.radixes[string(k)] = rad
 	return rad
 }
+
+func (tx *Tx) DeleteRadixBucket(key []byte) error { return tx.root.DeleteRadixBucket(key) }
 
 // CreateRadixBucket creates a new radix-tree bucket at the given key and returns the new bucket.
 // Returns an error if the key already exists, if the bucket name is blank, or if the bucket name is too long.
