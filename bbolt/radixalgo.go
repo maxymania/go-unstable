@@ -271,6 +271,11 @@ func (r *radixAccess) persist_walk(node *radixNode) (err error) {
 		// to tighter page-packing, which is desireable.
 		count := r.persist_n_pages(node)
 		sz := (r.tx.db.pageSize*count)-pageHeaderSize
+		
+		// Subtract the page's root node's size from the space available.
+		sz -= node.size()
+		
+		// Traverse the root subtree.
 		r.persist_pack(node,&sz)
 	}
 	if node.leafEx_p!=nil {
@@ -295,7 +300,6 @@ func (r *radixAccess) persist_walk(node *radixNode) (err error) {
 	return
 }
 func (r *radixAccess) persist_pack(node *radixNode,psz *int) {
-	*psz -= node.size()
 	for i,n := 0,int(node.n_edges); i<n; i++ {
 		// Skip non-heap children.
 		if node.edges_p[i]==nil { continue }
@@ -308,6 +312,9 @@ func (r *radixAccess) persist_pack(node *radixNode,psz *int) {
 		
 		// Mark as inlined.
 		node.edges_p[i].flags |= radixf_inlined
+		
+		// Subtract the size of the tree.
+		*psz -= node.edges_p[i].size()
 		
 		// Traverse further
 		r.persist_pack(node.edges_p[i],psz)
