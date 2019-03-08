@@ -150,7 +150,7 @@ func (r *rootobj) transfer(seg Segment) (Segment,error) {
 
 /* ******************************************************************* */
 
-func (r *rootobj) root(fn int64,iters []iterator.Iterator) (error) {
+func (r *rootobj) root(fn int64,iters []iterator.Iterator) error {
 	ftmp := storage.FileDesc{storage.TypeTemp,fn}
 	ftab := storage.FileDesc{storage.TypeTable,fn}
 	var k_buf []byte
