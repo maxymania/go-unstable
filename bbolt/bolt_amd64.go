@@ -1,3 +1,5 @@
+// +build amd64 riscv64
+
 package bbolt
 
 // maxMapSize represents the largest mmap size supported by Bolt.
