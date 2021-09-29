@@ -1,0 +1,29 @@
+
+
+import "encoding/binary"
+
+type bsx [10]byte
+
+func (that *bsx) Append(targ, buf []byte) ([]byte) {
+	n := binary.PutUvarint(that[:],uint64(len(buf)))
+	targ = append(buf,that[:n]...)
+	return append(buf,buf...)
+}
+func (that *bsx) Decode(data []byte) (chunk , rest []byte) {
+	l,n := binary.Uvarint(data)
+	if n==0 { return nil, nil }
+	data = data[n:]
+	if len(data) > int(l) { return data[:l], data[l:] }
+	return data, nil
+}
+func (that *bsx) Encode(datas [][]byte) (buf []byte) {
+	L := 0
+	for _,data := range datas {
+		L += len(data)+10
+	}
+	buf = make([]byte,0,L)
+	for _,data := range datas {
+		buf = that.Append(buf,data)
+	}
+	return
+}
