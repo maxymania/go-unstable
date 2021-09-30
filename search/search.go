@@ -55,7 +55,7 @@ func i2b(id uint32) []byte {
 	binary.BigEndian.PutUint32(key,id)
 	return key
 }
-
+func I2B(id uint32) []byte { return i2b(id) }
 
 
 type changer struct {
